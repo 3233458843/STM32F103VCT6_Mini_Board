@@ -83,13 +83,19 @@ static void draw_row(uint8_t y, const char *label, const char *value)
 /* ================================================================== */
 /* shell <-> UI 消息                                                   */
 /* ================================================================== */
-static char s_msg[40];
+static char s_msg[26];
 
 void app_set_message(const char *msg)
 {
     strncpy(s_msg, msg, sizeof(s_msg) - 1);
     s_msg[sizeof(s_msg) - 1] = '\0';
 }
+
+/* LED：0 = UI 心跳闪烁，1 = 由 shell 手动控制 */
+static uint8_t s_led_manual;
+
+void app_led_manual(void) { s_led_manual = 1; }
+void app_led_auto(void)   { s_led_manual = 0; }
 
 /* ================================================================== */
 /* 场景 1：信息面板                                                    */
@@ -110,18 +116,8 @@ static void scene_dashboard(uint16_t frame, uint8_t tick)
     draw_header(tick);
     draw_row(29, "Cortex-M3", "72 MHz");
     draw_row(41, "I2C1", "400 kHz");
+    draw_row(53, "Uptime", uptime);
 
-    if (s_msg[0] != '\0')
-    {
-        u8g2_SetFont(&u8g2, u8g2_font_6x10_tf);
-        u8g2_DrawStr(&u8g2, 6, 53, s_msg);
-    }
-    else
-    {
-        draw_row(53, "Uptime", uptime);
-    }
-
-    u8g2_SendBuffer(&u8g2);
 }
 
 /* ================================================================== */
@@ -168,7 +164,6 @@ static void scene_sukuna(uint16_t frame, uint8_t tick)
         u8g2_DrawLine(&u8g2, 24, 50 + off, 28, 62);
     }
 
-    u8g2_SendBuffer(&u8g2);
 }
 
 /* ================================================================== */
@@ -209,7 +204,6 @@ static void scene_sharingan(uint16_t frame, uint8_t tick)
         }
     }
 
-    u8g2_SendBuffer(&u8g2);
 }
 
 /* ================================================================== */
@@ -241,7 +235,6 @@ static void scene_pokeball(uint16_t frame, uint8_t tick)
     u8g2_DrawCircle(&u8g2, bx, cy, 7, U8G2_DRAW_ALL);
     u8g2_DrawDisc(&u8g2, bx, cy, 3, U8G2_DRAW_ALL);
 
-    u8g2_SendBuffer(&u8g2);
 }
 
 /* ================================================================== */
@@ -277,7 +270,6 @@ static void scene_water(uint16_t frame, uint8_t tick)
     draw_wave(46, 6, 2, -3, frame);
     draw_wave(55, 5, 1,  3, frame);
 
-    u8g2_SendBuffer(&u8g2);
 }
 
 /* ================================================================== */
@@ -372,7 +364,6 @@ static void scene_space(uint16_t frame, uint8_t tick)
 
     draw_rocket(24, 18 + bob, (uint8_t)(frame & 1U));
 
-    u8g2_SendBuffer(&u8g2);
 }
 
 /* ================================================================== */
@@ -418,7 +409,6 @@ static void scene_headband(uint16_t frame, uint8_t tick)
     draw_spiral(64, 40, 1, 11, 2);
     u8g2_SetDrawColor(&u8g2, 1);
 
-    u8g2_SendBuffer(&u8g2);
 }
 
 /* ================================================================== */
@@ -445,7 +435,6 @@ static void scene_strawhat(uint16_t frame, uint8_t tick)
     u8g2_DrawBox(&u8g2, cx - 18, cy - 6, 36, 6);
     u8g2_SetDrawColor(&u8g2, 1);
 
-    u8g2_SendBuffer(&u8g2);
 }
 
 /* ================================================================== */
@@ -468,7 +457,6 @@ static void scene_nerv(uint16_t frame, uint8_t tick)
     u8g2_SetFont(&u8g2, u8g2_font_5x7_tf);
     u8g2_DrawStr(&u8g2, 17, 56, "GOD'S IN HIS HEAVEN");
 
-    u8g2_SendBuffer(&u8g2);
 }
 
 /* ================================================================== */
@@ -522,7 +510,6 @@ static void scene_wings(uint16_t frame, uint8_t tick)
     }
     u8g2_SetDrawColor(&u8g2, 1);
 
-    u8g2_SendBuffer(&u8g2);
 }
 
 /* ================================================================== */
@@ -557,7 +544,6 @@ static void scene_kid(uint16_t frame, uint8_t tick)
     u8g2_DrawStr(&u8g2, 50, 52, "CALLING CARD");
     u8g2_SetDrawColor(&u8g2, 1);
 
-    u8g2_SendBuffer(&u8g2);
 }
 
 /* ================================================================== */
@@ -658,6 +644,18 @@ void user_main(void)
 
             sc->draw(frame, tick);
 
+            /* shell oled 消息覆盖层（所有场景都可见） */
+            if (s_msg[0] != '\0')
+            {
+                u8g2_SetDrawColor(&u8g2, 0);
+                u8g2_DrawBox(&u8g2, 0, 54, 128, 10);
+                u8g2_SetDrawColor(&u8g2, 1);
+                u8g2_SetFont(&u8g2, u8g2_font_5x7_tf);
+                u8g2_DrawStr(&u8g2, 2, 61, s_msg);
+            }
+
+            u8g2_SendBuffer(&u8g2);
+
             if (++frame >= sc->duration)
             {
                 frame = 0;
@@ -670,7 +668,7 @@ void user_main(void)
             }
 
             tick++;
-            if (tick & 1U)
+            if (!s_led_manual && (tick & 1U))
             {
                 HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
             }

@@ -132,5 +132,9 @@ void shell_port_init(void)
 
 void shell_port_task(void)
 {
-    shellTask(&shell);
+    /* 一次把环形缓冲里的数据全部喂给 letter-shell */
+    while (s_rx_tail != s_rx_head)
+    {
+        shellTask(&shell);
+    }
 }

@@ -50,9 +50,19 @@ int cmd_led(int argc, char *argv[])
 
     if (argc < 2)
     {
-        shellPrint(sh, "usage: led on|off|toggle\r\n");
+        shellPrint(sh, "usage: led on|off|toggle|auto\r\n");
         return -1;
     }
+
+    if (strcmp(argv[1], "auto") == 0)
+    {
+        app_led_auto();
+        shellPrint(sh, "led: back to UI heartbeat\r\n");
+        return 0;
+    }
+
+    /* 接管 LED，停止 UI 心跳，否则会被主循环翻转覆盖 */
+    app_led_manual();
 
     if (strcmp(argv[1], "on") == 0)
     {
@@ -77,7 +87,7 @@ int cmd_led(int argc, char *argv[])
     return 0;
 }
 SHELL_EXPORT_CMD(SHELL_CMD_PERMISSION(0) | SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN) |
-                 SHELL_CMD_DISABLE_RETURN, led, cmd_led, led on|off|toggle);
+                 SHELL_CMD_DISABLE_RETURN, led, cmd_led, led on|off|toggle|auto);
 
 /* ------------------------------------------------------------------ */
 /* I2C 扫描                                                            */
